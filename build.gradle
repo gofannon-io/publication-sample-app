@@ -1,0 +1,117 @@
+import java.nio.file.Files
+
+plugins {
+    id 'application'
+    id 'maven-publish'
+}
+
+group = 'io.gofannon.publication-sample'
+version = '1.0'
+
+
+application {
+    mainClassName = "io.gofannon.publication.sample.Main"
+    applicationName = "PublicationSample"
+}
+
+tasks.register("generateReadme") {
+    group = 'documentation'
+
+    def docDirectory = file("build/doc")
+    def readmeFile = new File(docDirectory, "readme.txt")
+
+    doLast {
+        if (!docDirectory.exists()) {
+            Files.createDirectory(docDirectory.toPath())
+        }
+
+        readmeFile.text = """
+Wonderful documentation
+With a lot of information
+""".trim()
+    }
+}
+
+tasks.register("distZipA", Zip) {
+    // Create dist-a/application-a.zip with structure
+    // ./PublicationSample-1.0/
+    //    bin/
+    //    lib/
+    // ./readme.txt
+    dependsOn distZip, generateReadme
+    group = "distribution"
+
+    archiveFileName = "application-a.zip"
+    destinationDirectory = layout.buildDirectory.dir("dist-a")
+
+    from layout.buildDirectory.dir("doc"), zipTree(distZip.archiveFile)
+}
+
+
+tasks.register("distZipB", Zip) {
+    dependsOn distZip, generateReadme
+    group = "distribution"
+
+    archiveFileName = "application-b.zip"
+    destinationDirectory = layout.buildDirectory.dir("dist-b")
+
+    from("$buildDir/doc") {
+        into "$applicationName-$version/doc"
+    }
+    from zipTree(distZip.archiveFile)
+}
+
+java {
+    withSourcesJar()
+    withJavadocJar()
+}
+
+
+publishing {
+    publications {
+        mavenJava(MavenPublication) {
+            from components.java
+        }
+
+        mavenDistZip(MavenPublication) {
+            artifact distZip
+        }
+
+        mavenDistZipA(MavenPublication) {
+            // publish publication-sample-app-1.0.zip with structure
+            // ./PublicationSample-1.0/
+            //    bin/
+            //    lib/
+            // ./readme.txt
+            artifact distZipA
+        }
+
+        mavenDistZipB(MavenPublication) {
+            // publish publication-sample-app-1.0.zip with structure
+            // ./PublicationSample-1.0/
+            //    bin/
+            //    lib/
+            //    doc/
+            //       readme.txt
+            artifact distZipB
+        }
+    }
+
+    repositories {
+        mavenLocal()
+    }
+}
+
+dependencies {
+    implementation 'org.jetbrains:annotations:24.0.1'
+    testImplementation platform('org.junit:junit-bom:5.9.3')
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+}
+
+repositories {
+    mavenCentral()
+}
+
+test {
+    useJUnitPlatform()
+}
