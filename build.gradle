@@ -62,10 +62,19 @@ tasks.register("distZipB", Zip) {
 }
 
 java {
-    withSourcesJar()
+//    withSourcesJar()
     withJavadocJar()
 }
 
+tasks.register('myJavadoc',  Javadoc) {
+    source = sourceSets.main.allJava
+}
+
+tasks.register( 'myJavadocJar', Jar) {
+    dependsOn myJavadoc
+    archiveClassifier='javadoc2'
+    from layout.buildDirectory.dir("docs/javadoc")
+}
 
 publishing {
     publications {
